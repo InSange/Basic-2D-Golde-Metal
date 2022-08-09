@@ -4,9 +4,11 @@ using UnityEngine;
 
 public class PlayerMove : MonoBehaviour
 {
+    public GameManager gameManager;
     public float maxSpeed = 3.0f;
     public float jumpPower;
     Rigidbody2D rigid;
+    CapsuleCollider2D capsuleCollider;
     SpriteRenderer spriteRenderer;
     Animator anim;
 
@@ -16,6 +18,7 @@ public class PlayerMove : MonoBehaviour
         rigid = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         anim = GetComponent<Animator>();
+        capsuleCollider = GetComponent<CapsuleCollider2D>();
     }
 
     private void Update()   // 1√ ø° 60»∏
@@ -33,7 +36,7 @@ public class PlayerMove : MonoBehaviour
             rigid.velocity = new Vector2(rigid.velocity.normalized.x * 0.5f, rigid.velocity.y);
         }
         //Direction Sprite
-        if(Input.GetButtonDown("Horizontal"))
+        if(Input.GetButton("Horizontal"))
         {
             spriteRenderer.flipX = Input.GetAxisRaw("Horizontal") == -1;
         }
@@ -85,15 +88,67 @@ public class PlayerMove : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        Debug.Log(collision.gameObject.name);
+        // Attack
         if(collision.gameObject.tag == "Enemy")
         {
-            OnDamaged(collision.transform.position);
+            if (rigid.velocity.y < 0 && transform.position.y > collision.transform.position.y && collision.gameObject.name.Contains("Enemy"))
+            {
+                OnAttack(collision.transform);
+            }
+            else // Damaged
+            {
+                OnDamaged(collision.transform.position);
+            }
         }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if(collision.gameObject.tag == "Item")
+        {
+            //Point
+            bool isBronze = collision.gameObject.name.Contains("Bronze");
+            bool isSilver = collision.gameObject.name.Contains("Silver");
+            bool isGold = collision.gameObject.name.Contains("Gold");
+
+            if (isBronze)
+            {
+                gameManager.stagePoint += 50;
+            }
+            else if(isSilver)
+            {
+                gameManager.stagePoint += 100;
+            }
+            else if(isGold)
+            {
+                gameManager.stagePoint += 300;
+            }
+
+            //Deactive Item
+            Destroy(collision.gameObject);
+        }
+        else if(collision.gameObject.tag == "Finish")
+        {
+            //Next Stage
+            gameManager.NextStage();
+        }
+    }
+
+    void OnAttack(Transform enemy)
+    {
+        // Point
+        gameManager.stagePoint += 100;
+        // Reaction Force
+        rigid.AddForce(Vector2.up * 10.0f, ForceMode2D.Impulse);
+        // Enemy Die
+        EnemyMove enemyMove = enemy.GetComponent<EnemyMove>();
+        enemyMove.OnDamaged();
     }
 
     void OnDamaged(Vector2 targetPos)
     {
+        // Health Down
+        gameManager.HealthDown();
         // Change Layer (Immortal Active)
         gameObject.layer = 9;
 
@@ -114,5 +169,22 @@ public class PlayerMove : MonoBehaviour
     {
         spriteRenderer.color = new Color(1, 1, 1, 1);
         gameObject.layer = 8;
+    }
+
+    public void OnDie()
+    {
+        //Sprite Alpha;
+        spriteRenderer.color = new Color(1, 1, 1, 0.4f);
+        //Sprite Flip Y
+        spriteRenderer.flipY = true;
+        //Collider Disable
+        capsuleCollider.enabled = false;
+        //Die Effect Jump
+        rigid.AddForce(Vector2.up * 5.0f, ForceMode2D.Impulse);
+    }
+
+    public void VelocityZero()
+    {
+        rigid.velocity = Vector2.zero;
     }
 }
