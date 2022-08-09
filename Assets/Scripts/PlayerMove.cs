@@ -83,4 +83,36 @@ public class PlayerMove : MonoBehaviour
         }
     }
 
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        Debug.Log(collision.gameObject.name);
+        if(collision.gameObject.tag == "Enemy")
+        {
+            OnDamaged(collision.transform.position);
+        }
+    }
+
+    void OnDamaged(Vector2 targetPos)
+    {
+        // Change Layer (Immortal Active)
+        gameObject.layer = 9;
+
+        // View Alpha
+        spriteRenderer.color = new Color(1, 1, 1, 0.4f);
+
+        // Reaction Force
+        int dirc = transform.position.x - targetPos.x > 0 ? 1 : -1;
+        rigid.AddForce(new Vector2(dirc, 1)*7.0f, ForceMode2D.Impulse);
+
+        // Animation
+        anim.SetTrigger("DoDamaged")
+;
+        Invoke("OffDamaged", 2.0f);
+    }
+
+    void OffDamaged()
+    {
+        spriteRenderer.color = new Color(1, 1, 1, 1);
+        gameObject.layer = 8;
+    }
 }
